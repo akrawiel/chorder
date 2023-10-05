@@ -1,0 +1,57 @@
+{
+  "max_rows": 3,
+  "max_columns": 4,
+  "margin": 16,
+  "spacing": 16,
+  "button_width": 150,
+  "button_height": 150,
+  "options": {
+    "main": [
+      {
+        "shortcut": "a",
+        "description": "apps",
+        "switch": "apps"
+      },
+      {
+        "switch": "projects",
+        "description": "projects",
+        "shortcut": "p"
+      },
+      {
+        "shortcut": "w",
+        "description": "work",
+        "switch": "work"
+      },
+      {
+        "shortcut": "b",
+        "description": "browsers",
+        "switch": "browsers"
+      },
+      {
+        "description": "config",
+        "switch": "config",
+        "shortcut": "c"
+      },
+      {
+        "description": "system",
+        "shortcut": "s",
+        "switch": "system"
+      },
+      {
+        "shortcut": "n",
+        "switch": "notes",
+        "description": "notes"
+      },
+      {
+        "description": "music",
+        "shortcut": "m",
+        "switch": "music"
+      },
+      {
+        "command": "clipboardToInbox",
+        "description": "Clipboard to inbox",
+        "shortcut": "m-Tab"
+      }
+    ]
+  }
+}
