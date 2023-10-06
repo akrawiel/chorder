@@ -2,6 +2,8 @@
 
 A little GTK app to control your system with subsequent keystrokes (or _chords_)
 
+![chorder window](/images/chorder.png "chorder window")
+
 ## How?
 
 You basically compile it and run it, as simple as that. If you have no config
