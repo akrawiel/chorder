@@ -1,6 +1,7 @@
-use gdk::Key;
-use std::collections::HashMap;
+use gdk::ModifierType;
+use gdk::{pango::AttrList, Key};
 use std::fs;
+use std::{collections::HashMap, path::PathBuf};
 
 use dirs;
 use gtk::{prelude::*, EventControllerKey};
@@ -11,7 +12,7 @@ trait WindowDimensions {
     fn get_window_width(&self) -> i32;
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct Config {
     max_rows: i32,
     max_columns: i32,
@@ -19,7 +20,8 @@ struct Config {
     spacing: i32,
     button_width: i32,
     button_height: i32,
-    options: HashMap<String, Vec<HashMap<String, String>>>,
+    shell: String,
+    options: HashMap<String, Vec<HashMap<String, serde_json::Value>>>,
 }
 
 impl WindowDimensions for Config {
@@ -36,6 +38,16 @@ impl WindowDimensions for Config {
     }
 }
 
+fn emacsify_modifier(modifier: ModifierType) -> &'static str {
+    match modifier {
+        ModifierType::ALT_MASK => "a-",
+        ModifierType::CONTROL_MASK => "c-",
+        ModifierType::SUPER_MASK => "m-",
+        ModifierType::SHIFT_MASK => "s-",
+        _ => "",
+    }
+}
+
 fn err_to_string<T: ToString>(err: T) -> String {
     err.to_string()
 }
@@ -49,6 +61,7 @@ fn on_activate(application: &gtk::Application) -> Result<(), String> {
         button_width: 150,
         button_height: 150,
         options: HashMap::new(),
+        shell: "".to_owned(),
     };
 
     let mut config = default_config;
@@ -80,6 +93,7 @@ fn on_activate(application: &gtk::Application) -> Result<(), String> {
 
     window.set_default_width(config.get_window_width());
     window.set_default_height(config.get_window_height());
+    window.set_modal(true);
     window.set_resizable(false);
 
     let grid = gtk::Grid::builder()
@@ -91,61 +105,235 @@ fn on_activate(application: &gtk::Application) -> Result<(), String> {
         .margin_end(config.margin)
         .build();
 
-    let mut buttons = vec![];
+    let mut buttons_with_labels = vec![];
 
     for y in 0..config.max_rows {
         for x in 0..config.max_columns {
             let button = gtk::Button::builder()
-                .label("Hello there")
                 .width_request(config.button_width)
                 .height_request(config.button_height)
                 .visible(false)
+                .focusable(false)
                 .build();
 
             button.connect_clicked(|button| {
                 button.set_label("What's up?");
             });
 
+            let button_box = gtk::Box::builder()
+                .homogeneous(true)
+                .orientation(gtk::Orientation::Vertical)
+                .build();
+
+            let dummy_label = gtk::Label::new(Some(""));
+
+            let attr_list = AttrList::new();
+            attr_list.insert(gdk::pango::AttrFontDesc::new(
+                &gdk::pango::FontDescription::from_string("monospace bold 24"),
+            ));
+
+            let shortcut_label = gtk::Label::builder()
+                .attributes(&attr_list)
+                .use_markup(true)
+                .build();
+
+            let attr_list = AttrList::new();
+            attr_list.insert(gdk::pango::AttrFontDesc::new(
+                &gdk::pango::FontDescription::from_string("monospace 10"),
+            ));
+
+            let description_label = gtk::Label::builder()
+                .attributes(&attr_list)
+                .use_markup(true)
+                .valign(gtk::Align::End)
+                .build();
+
+            button_box.append(&dummy_label);
+            button_box.append(&shortcut_label);
+            button_box.append(&description_label);
+
+            button.set_child(Some(&button_box));
+
             grid.attach(&button, x, y, 1, 1);
 
-            buttons.push(button);
+            buttons_with_labels.push((button, shortcut_label, description_label));
         }
     }
 
-    let state = "main";
+    let action_state = gdk::gio::SimpleAction::new_stateful(
+        "state",
+        Some(&String::static_variant_type()),
+        &"main".to_variant(),
+    );
 
-    let options_option = config.options.get(state);
+    let options_option = config.options.get("main");
+
+    for index in 0..(config.max_columns * config.max_rows) {
+        if let Some((button, _, _)) = buttons_with_labels.get(index as usize) {
+            button.set_visible(false);
+        }
+    }
 
     if let Some(options) = options_option {
         for (index, option) in options.iter().enumerate() {
-            println!("{} -> {:?}", index, option);
+            if let Some((button, shortcut_label, description_label)) =
+                buttons_with_labels.get(index)
+            {
+                let raw_shortcut = option.get("shortcut");
+                let raw_description = option.get("description");
 
-            let shortcut = option.get("shortcut").ok_or("No shortcut provided".to_string())?;
+                if raw_shortcut.is_none() || raw_description.is_none() {
+                    continue;
+                }
 
-            if let Some(button) = buttons.get(index) {
-                button.set_label(shortcut);
+                let shortcut = raw_shortcut
+                    .unwrap()
+                    .as_str()
+                    .unwrap_or_default()
+                    .to_owned();
+                let description = raw_description
+                    .unwrap()
+                    .as_str()
+                    .unwrap_or_default()
+                    .to_owned();
+
                 button.set_visible(true);
+                shortcut_label.set_label(&shortcut);
+                description_label.set_label(&description);
             }
         }
     }
 
-    // clone!(@weak window => move |_| window.close())
+    let config_clone = config.clone();
+
+    action_state.connect_change_state(move |action, parameter| {
+        let parameter = &parameter
+            .expect("Could not get parameter")
+            .get::<String>()
+            .unwrap_or_default();
+
+        action.set_state(&parameter.to_variant());
+
+        let options_option = config_clone.options.get(parameter);
+
+        for (button, _, _) in &buttons_with_labels {
+            button.set_visible(false);
+        }
+
+        if let Some(options) = options_option {
+            for (index, option) in options.iter().enumerate() {
+                if let Some((button, shortcut_label, description_label)) =
+                    buttons_with_labels.get(index)
+                {
+                    let raw_shortcut = option.get("shortcut");
+                    let raw_description = option.get("description");
+
+                    if raw_shortcut.is_none() || raw_description.is_none() {
+                        continue;
+                    }
+
+                    let shortcut = raw_shortcut
+                        .unwrap()
+                        .as_str()
+                        .unwrap_or_default()
+                        .to_owned();
+                    let description = raw_description
+                        .unwrap()
+                        .as_str()
+                        .unwrap_or_default()
+                        .to_owned();
+
+                    button.set_visible(true);
+                    shortcut_label.set_label(&shortcut);
+                    description_label.set_label(&description);
+                }
+            }
+        }
+    });
+    window.add_action(&action_state);
 
     let key_controller = EventControllerKey::new();
 
-    key_controller.connect_key_pressed(|_controller, key, _code, _modifier| {
-        println!("{}", key.name().unwrap_or("".into()));
-        match key {
-            Key::a => println!("You pressed 'a'!"),
-            _ => (),
+    key_controller.connect_key_pressed(move |_controller, key, _code, modifier| {
+        if key == Key::Escape {
+            std::process::exit(0);
+        }
+
+        let pressed_key = format!(
+            "{}{}",
+            [
+                emacsify_modifier(modifier & ModifierType::ALT_MASK),
+                emacsify_modifier(modifier & ModifierType::CONTROL_MASK),
+                emacsify_modifier(modifier & ModifierType::SUPER_MASK),
+                emacsify_modifier(modifier & ModifierType::SHIFT_MASK),
+            ]
+            .join(""),
+            key.name().unwrap_or("".into()).to_lowercase()
+        );
+
+        let options_option = config
+            .options
+            .get(&action_state.state().unwrap().get::<String>().unwrap())
+            .map(|found_option| {
+                found_option.iter().find(|option| {
+                    option
+                        .get("shortcut")
+                        .map_or(false, |shortcut| shortcut.to_owned() == pressed_key)
+                })
+            });
+
+        if let Some(Some(option)) = options_option {
+            let config_clone = config.clone();
+
+            if let Some(raw_switch) = option.get("switch") {
+                let switch = raw_switch.as_str().unwrap_or_default().to_owned();
+                action_state.change_state(&switch.to_variant());
+            }
+
+            if let Some(raw_run) = option.get("run") {
+                let run = raw_run.as_str().unwrap_or_default().to_owned();
+
+                let args = option.get("args").map_or(vec![], |value| {
+                    value.as_array().map_or(vec![], |array| {
+                        array
+                            .iter()
+                            .map(|value| value.as_str().unwrap_or_default().to_owned())
+                            .collect()
+                    })
+                });
+
+                let _ = std::process::Command::new(run).args(args).spawn();
+                std::process::exit(0);
+            }
+
+            if let Some(raw_script) = option.get("script") {
+                let script = raw_script.as_str().unwrap_or_default().to_owned();
+                let path = PathBuf::from(
+                    script.replace(
+                        "$HOME",
+                        dirs::home_dir()
+                            .unwrap_or_default()
+                            .to_str()
+                            .unwrap_or_default(),
+                    ),
+                );
+
+                let shell = option.get("shell").map_or(config_clone.shell, |value| {
+                    value.as_str().unwrap_or_default().to_owned()
+                });
+
+                let _ = std::process::Command::new(shell).args([path]).spawn();
+                std::process::exit(0);
+            }
         }
 
         return gtk::glib::Propagation::Stop;
     });
-    grid.add_controller(key_controller);
 
     window.set_child(Some(&grid));
     window.present();
+
+    window.add_controller(key_controller);
 
     return Ok(());
 }
