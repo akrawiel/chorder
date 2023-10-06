@@ -116,10 +116,6 @@ fn on_activate(application: &gtk::Application) -> Result<(), String> {
                 .focusable(false)
                 .build();
 
-            button.connect_clicked(|button| {
-                button.set_label("What's up?");
-            });
-
             let button_box = gtk::Box::builder()
                 .homogeneous(true)
                 .orientation(gtk::Orientation::Vertical)
