@@ -9,9 +9,11 @@ file yet, an empty one will be created for you instead. An empty window will be
 also a sign the app is working alright for now. Here are the config locations
 according to the [`dirs`](https://crates.io/crates/dirs) crate:
 
-| Linux | `$XDG_CONFIG_HOME` or `$HOME`/.config | /home/alice/.config/chorder/config.json |
-| macOS | `$HOME`/Library/Application Support | /Users/Alice/Library/Application Support/chorder/config.json |
-| Windows | `{FOLDERID_RoamingAppData}` | C:\Users\Alice\AppData\Roaming\chorder\config.json |
+| OS      | Config dir location                   | Example config file location                                   |
+| ------- | ------------------------------------- | -------------------------------------------------------------- |
+| Linux   | `$XDG_CONFIG_HOME` or `$HOME`/.config | `/home/alice/.config/chorder/config.json`                      |
+| macOS   | `$HOME`/Library/Application Support   | `/Users/Alice/Library/Application Support/chorder/config.json` |
+| Windows | `{FOLDERID_RoamingAppData}`           | `C:\Users\Alice\AppData\Roaming\chorder\config.json`           |
 
 An empty `config.json` file will look like this:
 
