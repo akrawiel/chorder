@@ -73,6 +73,7 @@ version = "0.1.0"
 dependencies = [
  "dirs",
  "gdk4",
+ "glib",
  "gtk4",
  "once_cell",
  "serde",
