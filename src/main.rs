@@ -92,8 +92,9 @@ fn err_to_string<T: ToString>(err: T) -> String {
 fn change_buttons_state(
     config: &Config,
     buttons_with_labels: &Vec<(gtk::Button, gtk::Label, gtk::Label)>,
+    state: &String
 ) {
-    let options_option = config.options.get("main");
+    let options_option = config.options.get(state);
 
     for (button, _, _) in buttons_with_labels {
         button.set_visible(false);
@@ -249,13 +250,15 @@ fn on_activate(application: &gtk::Application) -> Result<(), String> {
         }
     }
 
+    let default_state = "main";
+
     let action_state = gdk::gio::SimpleAction::new_stateful(
         "state",
         Some(&String::static_variant_type()),
-        &"main".to_variant(),
+        &default_state.to_variant(),
     );
 
-    change_buttons_state(&config, &buttons_with_labels);
+    change_buttons_state(&config, &buttons_with_labels, &default_state.to_owned());
 
     let config_clone = config.clone();
 
@@ -267,7 +270,7 @@ fn on_activate(application: &gtk::Application) -> Result<(), String> {
 
         action.set_state(&parameter.to_variant());
 
-        change_buttons_state(&config_clone, &buttons_with_labels);
+        change_buttons_state(&config_clone, &buttons_with_labels, parameter);
     });
     window.add_action(&action_state);
 
