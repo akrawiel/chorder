@@ -12,16 +12,61 @@ trait WindowDimensions {
     fn get_window_width(&self) -> i32;
 }
 
+type OptionsMap = HashMap<String, Vec<HashMap<String, serde_json::Value>>>;
+
+fn default_max_rows() -> i32 {
+    3
+}
+fn default_max_columns() -> i32 {
+    4
+}
+fn default_margin() -> i32 {
+    16
+}
+fn default_spacing() -> i32 {
+    16
+}
+fn default_button_width() -> i32 {
+    150
+}
+fn default_button_height() -> i32 {
+    150
+}
+fn default_shortcut_font() -> String {
+    "monospace bold 24".to_owned()
+}
+fn default_description_font() -> String {
+    "monospace 10".to_owned()
+}
+fn default_options() -> OptionsMap {
+    HashMap::new()
+}
+fn default_shell() -> String {
+    "".to_owned()
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Config {
+    #[serde(default = "default_max_rows")]
     max_rows: i32,
+    #[serde(default = "default_max_columns")]
     max_columns: i32,
+    #[serde(default = "default_margin")]
     margin: i32,
+    #[serde(default = "default_spacing")]
     spacing: i32,
+    #[serde(default = "default_button_width")]
     button_width: i32,
+    #[serde(default = "default_button_height")]
     button_height: i32,
+    #[serde(default = "default_shell")]
     shell: String,
-    options: HashMap<String, Vec<HashMap<String, serde_json::Value>>>,
+    #[serde(default = "default_shortcut_font")]
+    shortcut_font: String,
+    #[serde(default = "default_description_font")]
+    description_font: String,
+    #[serde(default = "default_options")]
+    options: OptionsMap,
 }
 
 impl WindowDimensions for Config {
@@ -53,18 +98,7 @@ fn err_to_string<T: ToString>(err: T) -> String {
 }
 
 fn on_activate(application: &gtk::Application) -> Result<(), String> {
-    let default_config: Config = Config {
-        max_rows: 3,
-        max_columns: 4,
-        margin: 16,
-        spacing: 16,
-        button_width: 150,
-        button_height: 150,
-        options: HashMap::new(),
-        shell: "".to_owned(),
-    };
-
-    let mut config = default_config;
+    let mut config = serde_json::from_str::<Config>("{}").unwrap();
 
     let system_config_dir = dirs::config_dir().expect("Config directory not found");
 
@@ -125,7 +159,7 @@ fn on_activate(application: &gtk::Application) -> Result<(), String> {
 
             let attr_list = AttrList::new();
             attr_list.insert(gdk::pango::AttrFontDesc::new(
-                &gdk::pango::FontDescription::from_string("monospace bold 24"),
+                &gdk::pango::FontDescription::from_string(&config.shortcut_font),
             ));
 
             let shortcut_label = gtk::Label::builder()
@@ -135,7 +169,7 @@ fn on_activate(application: &gtk::Application) -> Result<(), String> {
 
             let attr_list = AttrList::new();
             attr_list.insert(gdk::pango::AttrFontDesc::new(
-                &gdk::pango::FontDescription::from_string("monospace 10"),
+                &gdk::pango::FontDescription::from_string(&config.description_font),
             ));
 
             let description_label = gtk::Label::builder()
