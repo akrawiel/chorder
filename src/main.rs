@@ -119,6 +119,17 @@ fn on_activate(application: &gtk::Application) -> Result<(), String> {
             .map_err(|err| format!("JSON error: {}", err.to_string()))?;
     }
 
+    for (key, opts) in &config.options {
+        if opts.len() > (config.max_rows as usize) * (config.max_columns as usize) {
+            return Err(format!(
+                r#"Too many options at key "{}" - should be at most {}, has {}"#,
+                key,
+                config.max_rows * config.max_columns,
+                opts.len()
+            ));
+        }
+    }
+
     let stringified_config = serde_json::to_string_pretty(&config).map_err(err_to_string)?;
 
     fs::write(&app_config_file_path, stringified_config).map_err(err_to_string)?;
