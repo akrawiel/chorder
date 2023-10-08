@@ -155,22 +155,35 @@ fn on_activate(application: &gtk::Application) -> Result<(), String> {
                 .orientation(gtk::Orientation::Vertical)
                 .build();
 
-            let dummy_label = gtk::Label::new(Some(""));
+            let attr_list = AttrList::new();
+            attr_list.insert(gdk::pango::AttrFontDesc::new(
+                &gdk::pango::FontDescription::from_string(&config.description_font),
+            ));
+            attr_list.insert(gdk::pango::AttrInt::new_line_height_absolute(1));
+
+            let dummy_label = gtk::Label::builder()
+                .attributes(&attr_list)
+                .valign(gtk::Align::Start)
+                .label(" ")
+                .build();
 
             let attr_list = AttrList::new();
             attr_list.insert(gdk::pango::AttrFontDesc::new(
                 &gdk::pango::FontDescription::from_string(&config.shortcut_font),
             ));
+            attr_list.insert(gdk::pango::AttrInt::new_line_height_absolute(1));
 
             let shortcut_label = gtk::Label::builder()
                 .attributes(&attr_list)
                 .use_markup(true)
+                .valign(gtk::Align::Center)
                 .build();
 
             let attr_list = AttrList::new();
             attr_list.insert(gdk::pango::AttrFontDesc::new(
                 &gdk::pango::FontDescription::from_string(&config.description_font),
             ));
+            attr_list.insert(gdk::pango::AttrInt::new_line_height_absolute(1));
 
             let description_label = gtk::Label::builder()
                 .attributes(&attr_list)
