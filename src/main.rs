@@ -1,16 +1,8 @@
-use gdk::ModifierType;
-use gdk::{pango::AttrList, Key};
-use std::fs;
-use std::{collections::HashMap, path::PathBuf};
-
 use dirs;
+use gdk::{ModifierType, pango::AttrList, Key};
 use gtk::{prelude::*, EventControllerKey};
 use serde::{Deserialize, Serialize};
-
-trait WindowDimensions {
-    fn get_window_height(&self) -> i32;
-    fn get_window_width(&self) -> i32;
-}
+use std::{fs, collections::HashMap, path::PathBuf};
 
 type OptionsMap = HashMap<String, Vec<HashMap<String, serde_json::Value>>>;
 
@@ -69,7 +61,7 @@ struct Config {
     options: OptionsMap,
 }
 
-impl WindowDimensions for Config {
+impl Config {
     fn get_window_width(&self) -> i32 {
         (self.button_width * self.max_columns)
             + (self.margin * 2)
