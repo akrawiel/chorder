@@ -142,6 +142,8 @@ fn on_activate(application: &gtk::Application) -> Result<(), String> {
                 .attributes(&attr_list)
                 .use_markup(true)
                 .valign(gtk::Align::End)
+                .ellipsize(gdk::pango::EllipsizeMode::End)
+                .max_width_chars(1)
                 .build();
 
             button_box.append(&dummy_label);
