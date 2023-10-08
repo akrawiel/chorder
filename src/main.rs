@@ -97,6 +97,47 @@ fn err_to_string<T: ToString>(err: T) -> String {
     err.to_string()
 }
 
+fn change_buttons_state(
+    config: &Config,
+    buttons_with_labels: &Vec<(gtk::Button, gtk::Label, gtk::Label)>,
+) {
+    let options_option = config.options.get("main");
+
+    for (button, _, _) in buttons_with_labels {
+        button.set_visible(false);
+    }
+
+    if let Some(options) = options_option {
+        for (index, option) in options.iter().enumerate() {
+            if let Some((button, shortcut_label, description_label)) =
+                buttons_with_labels.get(index)
+            {
+                let raw_shortcut = option.get("shortcut");
+                let raw_description = option.get("description");
+
+                if raw_shortcut.is_none() || raw_description.is_none() {
+                    continue;
+                }
+
+                let shortcut = raw_shortcut
+                    .unwrap()
+                    .as_str()
+                    .unwrap_or_default()
+                    .to_owned();
+                let description = raw_description
+                    .unwrap()
+                    .as_str()
+                    .unwrap_or_default()
+                    .to_owned();
+
+                button.set_visible(true);
+                shortcut_label.set_label(&shortcut);
+                description_label.set_label(&description);
+            }
+        }
+    }
+}
+
 fn on_activate(application: &gtk::Application) -> Result<(), String> {
     let mut config = serde_json::from_str::<Config>("{}").unwrap();
 
@@ -222,43 +263,7 @@ fn on_activate(application: &gtk::Application) -> Result<(), String> {
         &"main".to_variant(),
     );
 
-    let options_option = config.options.get("main");
-
-    for index in 0..(config.max_columns * config.max_rows) {
-        if let Some((button, _, _)) = buttons_with_labels.get(index as usize) {
-            button.set_visible(false);
-        }
-    }
-
-    if let Some(options) = options_option {
-        for (index, option) in options.iter().enumerate() {
-            if let Some((button, shortcut_label, description_label)) =
-                buttons_with_labels.get(index)
-            {
-                let raw_shortcut = option.get("shortcut");
-                let raw_description = option.get("description");
-
-                if raw_shortcut.is_none() || raw_description.is_none() {
-                    continue;
-                }
-
-                let shortcut = raw_shortcut
-                    .unwrap()
-                    .as_str()
-                    .unwrap_or_default()
-                    .to_owned();
-                let description = raw_description
-                    .unwrap()
-                    .as_str()
-                    .unwrap_or_default()
-                    .to_owned();
-
-                button.set_visible(true);
-                shortcut_label.set_label(&shortcut);
-                description_label.set_label(&description);
-            }
-        }
-    }
+    change_buttons_state(&config, &buttons_with_labels);
 
     let config_clone = config.clone();
 
@@ -270,41 +275,7 @@ fn on_activate(application: &gtk::Application) -> Result<(), String> {
 
         action.set_state(&parameter.to_variant());
 
-        let options_option = config_clone.options.get(parameter);
-
-        for (button, _, _) in &buttons_with_labels {
-            button.set_visible(false);
-        }
-
-        if let Some(options) = options_option {
-            for (index, option) in options.iter().enumerate() {
-                if let Some((button, shortcut_label, description_label)) =
-                    buttons_with_labels.get(index)
-                {
-                    let raw_shortcut = option.get("shortcut");
-                    let raw_description = option.get("description");
-
-                    if raw_shortcut.is_none() || raw_description.is_none() {
-                        continue;
-                    }
-
-                    let shortcut = raw_shortcut
-                        .unwrap()
-                        .as_str()
-                        .unwrap_or_default()
-                        .to_owned();
-                    let description = raw_description
-                        .unwrap()
-                        .as_str()
-                        .unwrap_or_default()
-                        .to_owned();
-
-                    button.set_visible(true);
-                    shortcut_label.set_label(&shortcut);
-                    description_label.set_label(&description);
-                }
-            }
-        }
+        change_buttons_state(&config_clone, &buttons_with_labels);
     });
     window.add_action(&action_state);
 
