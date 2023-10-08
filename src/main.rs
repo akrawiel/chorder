@@ -1,8 +1,8 @@
 use dirs;
-use gdk::{ModifierType, pango::AttrList, Key};
+use gdk::{pango::AttrList, Key, ModifierType};
 use gtk::{prelude::*, EventControllerKey};
 use serde::{Deserialize, Serialize};
-use std::{fs, collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, fs, path::PathBuf, rc::Rc};
 
 type OptionsMap = HashMap<String, Vec<HashMap<String, serde_json::Value>>>;
 
@@ -92,7 +92,7 @@ fn err_to_string<T: ToString>(err: T) -> String {
 fn change_buttons_state(
     config: &Config,
     buttons_with_labels: &Vec<(gtk::Button, gtk::Label, gtk::Label)>,
-    state: &String
+    state: &String,
 ) {
     let options_option = config.options.get(state);
 
@@ -132,7 +132,7 @@ fn change_buttons_state(
 }
 
 fn on_activate(application: &gtk::Application) -> Result<(), String> {
-    let mut config = serde_json::from_str::<Config>("{}").unwrap();
+    let mut config = Rc::new(serde_json::from_str::<Config>("{}").unwrap());
 
     let system_config_dir = dirs::config_dir().expect("Config directory not found");
 
@@ -149,8 +149,10 @@ fn on_activate(application: &gtk::Application) -> Result<(), String> {
     if app_config_file_exists {
         let config_file_contents =
             fs::read_to_string(&app_config_file_path).map_err(err_to_string)?;
-        config = serde_json::from_str::<Config>(&config_file_contents)
-            .map_err(|err| format!("JSON error: {}", err.to_string()))?;
+        config = Rc::new(
+            serde_json::from_str::<Config>(&config_file_contents)
+                .map_err(|err| format!("JSON error: {}", err.to_string()))?,
+        );
     }
 
     for (key, opts) in &config.options {
@@ -164,7 +166,7 @@ fn on_activate(application: &gtk::Application) -> Result<(), String> {
         }
     }
 
-    let stringified_config = serde_json::to_string_pretty(&config).map_err(err_to_string)?;
+    let stringified_config = serde_json::to_string_pretty(&*config).map_err(err_to_string)?;
 
     fs::write(&app_config_file_path, stringified_config).map_err(err_to_string)?;
 
@@ -340,9 +342,11 @@ fn on_activate(application: &gtk::Application) -> Result<(), String> {
                     ),
                 );
 
-                let shell = option.get("shell").map_or(config_clone.shell, |value| {
-                    value.as_str().unwrap_or_default().to_owned()
-                });
+                let shell = option
+                    .get("shell")
+                    .map_or(config_clone.shell.as_str(), |value| {
+                        value.as_str().unwrap_or_default()
+                    });
 
                 let _ = std::process::Command::new(shell).args([path]).spawn();
                 std::process::exit(0);
