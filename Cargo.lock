@@ -75,7 +75,6 @@ dependencies = [
  "gdk4",
  "glib",
  "gtk4",
- "once_cell",
  "serde",
  "serde_json",
 ]
