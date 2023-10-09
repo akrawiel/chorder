@@ -2,9 +2,14 @@ use dirs;
 use gdk::{pango::AttrList, Key, ModifierType};
 use gtk::{prelude::*, EventControllerKey};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fs, path::PathBuf, rc::Rc};
+use std::{
+    collections::BTreeMap,
+    fs,
+    path::PathBuf,
+    rc::Rc,
+};
 
-type OptionsMap = HashMap<String, Vec<HashMap<String, serde_json::Value>>>;
+type OptionsMap = BTreeMap<String, Vec<BTreeMap<String, serde_json::Value>>>;
 
 fn default_max_rows() -> i32 {
     3
@@ -31,7 +36,7 @@ fn default_description_font() -> String {
     "monospace 10".to_owned()
 }
 fn default_options() -> OptionsMap {
-    HashMap::new()
+    BTreeMap::new()
 }
 fn default_shell() -> String {
     "".to_owned()
